@@ -27,7 +27,7 @@ Necessary Libraries:
 When adding new data, go to [/db/data](./db/data/) and add the new `.csv` files. If changes are to be made to the [clean_data.py](./db/clean_data.py) script make sure you are in the root directory, then run:
 ```
 cd db
-source uigrades/bin/activate
+source uigrades_virt/bin/activate
 pip3 install -r requirements.txt
 ```
 The script should now be able to run / be edited
