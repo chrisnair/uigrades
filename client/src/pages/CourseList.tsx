@@ -76,7 +76,7 @@ const CourseList: React.FC = () => {
     }`;
     window.history.pushState({}, "", url);
 
-    // getCourses(currentPage, currSearchQuery);
+    getCourses(currentPage, currSearchQuery);
   }, [currentPage, currSearchQuery]);
 
   // should trigger this useeffect when the current search query changes
