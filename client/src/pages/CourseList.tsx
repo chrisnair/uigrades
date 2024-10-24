@@ -55,41 +55,80 @@ const CourseList: React.FC = () => {
 
   const pageRef = useRef(null);
 
-  // checks the url for a page query, if it exists, set the current page to that page
-  useEffect(() => {
+
+  // Function to parse URL parameters
+  const parseUrlParams = () => {
     const pageParam = new URLSearchParams(window.location.search).get("page");
     const queryParam = new URLSearchParams(window.location.search).get("q");
-    const page:number = pageParam ? parseInt(pageParam) : 1;
-    const query:string = queryParam ? queryParam.toLowerCase() : "";
+    return {
+      page: pageParam ? parseInt(pageParam) : 1,
+      query: queryParam ? queryParam.toLowerCase() : ""
+    };
+  };
+  
+  // Set states of current page and query from the URL
+  useEffect(() => {
+   const { page, query} = parseUrlParams();
+
     setCurrentPage(page);
     setCurrSearchQuery(query);
-
-    getCourses(page, query);
+    
     // @ts-ignore
-    pageRef.current.scrollIntoView();
+    pageRef.current?.scrollIntoView();
   }, []);
 
-  // should trigger this useeffect when the current page or search query changes
+  // Add popstate event listener for browser navigation
   useEffect(() => {
+    const handlePopState = () => {
+      const { page, query } = parseUrlParams();
+      setCurrentPage(page);
+      setCurrSearchQuery(query);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
+
+  // Triggers on updating of the query or the page number.
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(`${SERVER}/courses?page=${currentPage}&q=${currSearchQuery}`);
+
+        if (!res.ok) {
+          throw new Error("Invalid Request");
+        }
+        
+        const { data, totalItems }: ApiDataInterface = await res.json();
+        setData(data);
+        setTotalPages(Math.ceil(totalItems / pageSize));
+      } catch (err) {
+        console.log(err.message);
+        if (err.message.includes("Invalid Request")) {
+          setCurrentPage(1);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // Update URL
     const url:string = `/courses?page=${currentPage}${
       currSearchQuery ? "&q=" + currSearchQuery : ""
     }`;
     window.history.pushState({}, "", url);
 
-    getCourses(currentPage, currSearchQuery);
-  }, [currentPage, currSearchQuery]);
-
-  // should trigger this useeffect when the current search query changes
-  // this is a debouncer for course searching, use this so every letter doesn't fetch and update data
-  useEffect(() => {
+    // Debounce the fetch when search query changes
     const timeout = setTimeout(() => {
-      getCourses(currentPage, currSearchQuery);
-    }, 200);
+      fetchData();
+    }, currSearchQuery ? 200 : 0); // Only debounce for search queries
 
-    return () => {
-      clearTimeout(timeout);
-    }
-  }, [currSearchQuery]);
+    return () => clearTimeout(timeout);
+  }, [currentPage, currSearchQuery]);
 
   const handleSearch = async (page:number, q:string) => {
     setCurrSearchQuery(q);
